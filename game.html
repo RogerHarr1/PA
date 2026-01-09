@@ -351,6 +351,7 @@ const HEX_TYPES = {
     STABLE: 'stable',
     WATCHTOWER: 'watchtower',
     SHADOW_CAMP: 'shadow_camp',
+    CAMP: 'camp',  // Healing hex - full HP restore
     SPAWN_P1: 'spawn_p1',
     SPAWN_P2: 'spawn_p2'
 };
@@ -365,6 +366,7 @@ const HEX_COLORS = {
     [HEX_TYPES.STABLE]: '#c2956e',
     [HEX_TYPES.WATCHTOWER]: '#4682b4',
     [HEX_TYPES.SHADOW_CAMP]: '#2c1e4a',
+    [HEX_TYPES.CAMP]: '#3cb371',  // Healing camp - green
     [HEX_TYPES.SPAWN_P1]: '#1a3a5c',
     [HEX_TYPES.SPAWN_P2]: '#5c1a1a'
 };
@@ -379,6 +381,7 @@ const HEX_NAMES = {
     [HEX_TYPES.STABLE]: 'Stable',
     [HEX_TYPES.WATCHTOWER]: 'Watchtower',
     [HEX_TYPES.SHADOW_CAMP]: 'Shadow Camp',
+    [HEX_TYPES.CAMP]: 'Healing Camp',
     [HEX_TYPES.SPAWN_P1]: 'Player 1 Spawn',
     [HEX_TYPES.SPAWN_P2]: 'Player 2 Spawn'
 };
@@ -456,6 +459,7 @@ const BALANCE = {
     XP_PER_GATHER: 1,
     XP_PER_COMBAT_WIN: 2,
     XP_PER_COMBAT_SURVIVE: 1,
+    PASSIVE_HEAL: 1,  // HP healed when not moving
     STARTING_RESOURCES: {
         [RESOURCES.WOOD]: 0,
         [RESOURCES.ORE]: 0,
@@ -531,7 +535,7 @@ class HexGrid {
         if (p1Spawn) p1Spawn.type = HEX_TYPES.SPAWN_P1;
         if (p2Spawn) p2Spawn.type = HEX_TYPES.SPAWN_P2;
 
-        const trainingTypes = [HEX_TYPES.FOREST, HEX_TYPES.MINE, HEX_TYPES.FARM, HEX_TYPES.BARRACKS, HEX_TYPES.ARCHERY_RANGE, HEX_TYPES.STABLE, HEX_TYPES.WATCHTOWER, HEX_TYPES.SHADOW_CAMP];
+        const trainingTypes = [HEX_TYPES.FOREST, HEX_TYPES.MINE, HEX_TYPES.FARM, HEX_TYPES.BARRACKS, HEX_TYPES.ARCHERY_RANGE, HEX_TYPES.STABLE, HEX_TYPES.WATCHTOWER, HEX_TYPES.SHADOW_CAMP, HEX_TYPES.CAMP];
         const emptyHexes = hexArray.filter(h => h.type === HEX_TYPES.EMPTY);
         for (let i = emptyHexes.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -647,7 +651,7 @@ class HexRenderer {
         const icons = {
             [HEX_TYPES.FOREST]: 'T', [HEX_TYPES.MINE]: 'M', [HEX_TYPES.FARM]: 'F',
             [HEX_TYPES.BARRACKS]: 'B', [HEX_TYPES.ARCHERY_RANGE]: 'A', [HEX_TYPES.STABLE]: 'S',
-            [HEX_TYPES.WATCHTOWER]: 'W', [HEX_TYPES.SHADOW_CAMP]: 'C',
+            [HEX_TYPES.WATCHTOWER]: 'W', [HEX_TYPES.SHADOW_CAMP]: 'C', [HEX_TYPES.CAMP]: '+',
             [HEX_TYPES.SPAWN_P1]: 'P1', [HEX_TYPES.SPAWN_P2]: 'P2'
         };
         if (icons[hex.type]) {
@@ -788,6 +792,8 @@ class Unit {
     getGatherRate(name) { return this.getAbilityLevel(name); }
     getScoutRange() { const l = this.getAbilityLevel(ABILITIES.SCOUTING); return l > 0 ? BALANCE.SCOUT_REVEAL_RANGE + l - 1 : 0; }
     takeDamage(amt) { this.hp -= amt; if (this.hp <= 0) { this.hp = 0; return {died: true}; } return {died: false}; }
+    heal(amt) { const oldHp = this.hp; this.hp = Math.min(this.hp + amt, this.maxHp); return this.hp - oldHp; }
+    fullHeal() { const healed = this.maxHp - this.hp; this.hp = this.maxHp; return healed; }
     resetTurn() { this.hasActed = false; this.hasMoved = false; this.attacksReceivedThisTurn = 0; }
     canAct() { return !this.hasActed; }
     canMove() { return !this.hasMoved && !this.hasActed; }
@@ -1100,6 +1106,19 @@ class Game {
     }
 
     endTurn() {
+        // Process healing for current player's units BEFORE resetting turn
+        for (const u of this.units[this.currentPlayer]) {
+            // Full heal on healing camp
+            if (u.hex && u.hex.type === HEX_TYPES.CAMP && u.hp < u.maxHp) {
+                const healed = u.fullHeal();
+                if (healed > 0) this.addLog(`P${u.owner} unit fully healed at camp! (+${healed} HP)`, 'heal');
+            }
+            // Passive healing if unit didn't move
+            else if (!u.hasMoved && u.hp < u.maxHp) {
+                const healed = u.heal(BALANCE.PASSIVE_HEAL);
+                if (healed > 0) this.addLog(`P${u.owner} unit rested (+${healed} HP)`, 'heal');
+            }
+        }
         for (const u of this.units[this.currentPlayer]) u.resetTurn();
         this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
         if (this.currentPlayer === 1) this.turnNumber++;
@@ -1165,8 +1184,12 @@ class Game {
         if (!hex) { typeEl.textContent = 'Hover over hex'; coordsEl.textContent = ''; trainEl.textContent = ''; return; }
         typeEl.textContent = HEX_NAMES[hex.type] || 'Unknown';
         coordsEl.textContent = `(${hex.q}, ${hex.r})`;
-        const info = this.training.getTrainingInfo(hex);
-        trainEl.textContent = info ? `Teaches: ${info.abilityName}` : '';
+        if (hex.type === HEX_TYPES.CAMP) {
+            trainEl.textContent = 'Full heal at end of turn';
+        } else {
+            const info = this.training.getTrainingInfo(hex);
+            trainEl.textContent = info ? `Teaches: ${info.abilityName}` : '';
+        }
     }
 
     addLog(msg, type = 'info') {
