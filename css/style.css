@@ -1,0 +1,280 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#game-header {
+    background: #16213e;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #0f3460;
+}
+
+#game-header h1 {
+    color: #e94560;
+    font-size: 1.5rem;
+}
+
+#turn-info {
+    font-size: 1.1rem;
+}
+
+#current-player {
+    font-weight: bold;
+    color: #4da6ff;
+}
+
+#main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Panels */
+aside {
+    width: 220px;
+    background: #16213e;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+}
+
+.panel {
+    background: #1a1a2e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.panel h3 {
+    color: #e94560;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Resources */
+.resource {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 5px 0;
+    font-size: 0.95rem;
+}
+
+.resource-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+.wood-icon { background: #8B4513; }
+.ore-icon { background: #708090; }
+.food-icon { background: #228B22; }
+
+/* Buttons */
+.action-btn {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 6px;
+    background: #0f3460;
+    color: #eee;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.action-btn:hover {
+    background: #1a5490;
+}
+
+.action-btn.primary {
+    background: #e94560;
+}
+
+.action-btn.primary:hover {
+    background: #ff6b6b;
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.size-btn {
+    padding: 12px 20px;
+    margin: 5px;
+    border: 2px solid #0f3460;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #eee;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.size-btn:hover {
+    border-color: #e94560;
+    background: #16213e;
+}
+
+/* Game Board */
+#game-board-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #0f0f1a;
+    position: relative;
+}
+
+#board-size-selector {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+    padding: 30px;
+}
+
+#board-size-selector.hidden {
+    display: none;
+}
+
+#game-board {
+    display: none;
+}
+
+#game-board.visible {
+    display: block;
+}
+
+/* Unit Details */
+#unit-details.hidden {
+    display: none;
+}
+
+#unit-owner {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#unit-hp {
+    color: #4da6ff;
+    margin-bottom: 8px;
+}
+
+#unit-abilities {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+.ability-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid #0f3460;
+}
+
+.ability-name {
+    color: #ccc;
+}
+
+.ability-level {
+    color: #ffd700;
+}
+
+/* Hex Info */
+#hex-type {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#hex-coords {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+#hex-training-info {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #4da6ff;
+}
+
+/* Combat Log */
+#combat-log {
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+
+.log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid #0f3460;
+}
+
+.log-entry.damage {
+    color: #ff6b6b;
+}
+
+.log-entry.heal {
+    color: #4da6ff;
+}
+
+.log-entry.level-up {
+    color: #ffd700;
+}
+
+.log-entry.death {
+    color: #e94560;
+    font-weight: bold;
+}
+
+/* Utility */
+.hidden {
+    display: none !important;
+}
+
+/* Player colors */
+.player1 { color: #4da6ff; }
+.player2 { color: #ff6b6b; }
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a2e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #0f3460;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #1a5490;
+}
