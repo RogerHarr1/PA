@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hex Tactics</title>
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#game-header {
+    background: #16213e;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #0f3460;
+}
+
+#game-header h1 {
+    color: #e94560;
+    font-size: 1.5rem;
+}
+
+#turn-info {
+    font-size: 1.1rem;
+}
+
+#current-player {
+    font-weight: bold;
+    color: #4da6ff;
+}
+
+#main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+aside {
+    width: 220px;
+    background: #16213e;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+}
+
+.panel {
+    background: #1a1a2e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.panel h3 {
+    color: #e94560;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.resource {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 5px 0;
+    font-size: 0.95rem;
+}
+
+.resource-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+.wood-icon { background: #8B4513; }
+.ore-icon { background: #708090; }
+.food-icon { background: #228B22; }
+
+.action-btn {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 6px;
+    background: #0f3460;
+    color: #eee;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.action-btn:hover {
+    background: #1a5490;
+}
+
+.action-btn.primary {
+    background: #e94560;
+}
+
+.action-btn.primary:hover {
+    background: #ff6b6b;
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.size-btn {
+    padding: 12px 20px;
+    margin: 5px;
+    border: 2px solid #0f3460;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #eee;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.size-btn:hover {
+    border-color: #e94560;
+    background: #16213e;
+}
+
+#game-board-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #0f0f1a;
+    position: relative;
+}
+
+#board-size-selector {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+    padding: 30px;
+}
+
+#board-size-selector.hidden {
+    display: none;
+}
+
+#game-board {
+    display: none;
+}
+
+#game-board.visible {
+    display: block;
+}
+
+#unit-details.hidden {
+    display: none;
+}
+
+#unit-owner {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#unit-hp {
+    color: #4da6ff;
+    margin-bottom: 8px;
+}
+
+#unit-abilities {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+.ability-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid #0f3460;
+}
+
+.ability-name {
+    color: #ccc;
+}
+
+.ability-level {
+    color: #ffd700;
+}
+
+#hex-type {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#hex-coords {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+#hex-training-info {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #4da6ff;
+}
+
+#combat-log {
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+
+.log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid #0f3460;
+}
+
+.log-entry.damage {
+    color: #ff6b6b;
+}
+
+.log-entry.heal {
+    color: #4da6ff;
+}
+
+.log-entry.level-up {
+    color: #ffd700;
+}
+
+.log-entry.death {
+    color: #e94560;
+    font-weight: bold;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.player1 { color: #4da6ff; }
+.player2 { color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <header id="game-header">
+            <h1>Hex Tactics</h1>
+            <div id="turn-info">
+                <span id="current-player">Player 1</span> -
+                <span id="turn-phase">Move Phase</span>
+            </div>
+        </header>
+
+        <div id="main-content">
+            <aside id="left-panel">
+                <div id="resources-panel" class="panel">
+                    <h3>Resources</h3>
+                    <div class="resource">
+                        <span class="resource-icon wood-icon"></span>
+                        <span id="wood-count">0</span> Wood
+                    </div>
+                    <div class="resource">
+                        <span class="resource-icon ore-icon"></span>
+                        <span id="ore-count">0</span> Ore
+                    </div>
+                    <div class="resource">
+                        <span class="resource-icon food-icon"></span>
+                        <span id="food-count">0</span> Food
+                    </div>
+                </div>
+
+                <div id="actions-panel" class="panel">
+                    <h3>Actions</h3>
+                    <button id="btn-spawn" class="action-btn">Spawn Recruit (5 food)</button>
+                    <button id="btn-end-turn" class="action-btn primary">End Turn</button>
+                </div>
+            </aside>
+
+            <main id="game-board-container">
+                <div id="board-size-selector" class="panel">
+                    <h3>Select Board Size</h3>
+                    <button class="size-btn" data-size="3">Small (3 rings)</button>
+                    <button class="size-btn" data-size="4">Medium (4 rings)</button>
+                    <button class="size-btn" data-size="5">Large (5 rings)</button>
+                    <button class="size-btn" data-size="6">XL (6 rings)</button>
+                </div>
+                <canvas id="game-board"></canvas>
+            </main>
+
+            <aside id="right-panel">
+                <div id="selected-unit-panel" class="panel">
+                    <h3>Selected Unit</h3>
+                    <div id="no-selection">No unit selected</div>
+                    <div id="unit-details" class="hidden">
+                        <div id="unit-owner"></div>
+                        <div id="unit-hp"></div>
+                        <div id="unit-abilities"></div>
+                        <div id="unit-actions">
+                            <button id="btn-train" class="action-btn hidden">Train Here</button>
+                            <button id="btn-gather" class="action-btn hidden">Gather</button>
+                            <button id="btn-attack" class="action-btn hidden">Attack</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hex-info-panel" class="panel">
+                    <h3>Hex Info</h3>
+                    <div id="hex-type">Hover over a hex</div>
+                    <div id="hex-coords"></div>
+                    <div id="hex-training-info"></div>
+                </div>
+
+                <div id="combat-log-panel" class="panel">
+                    <h3>Combat Log</h3>
+                    <div id="combat-log"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+// ============ CONSTANTS ============
+const HEX_SIZE = 40;
+
+const HEX_TYPES = {
+    EMPTY: 'empty',
+    FOREST: 'forest',
+    MINE: 'mine',
+    FARM: 'farm',
+    BARRACKS: 'barracks',
+    ARCHERY_RANGE: 'archery_range',
+    STABLE: 'stable',
+    WATCHTOWER: 'watchtower',
+    SHADOW_CAMP: 'shadow_camp',
+    SPAWN_P1: 'spawn_p1',
+    SPAWN_P2: 'spawn_p2'
+};
+
+const HEX_COLORS = {
+    [HEX_TYPES.EMPTY]: '#2d4a3e',
+    [HEX_TYPES.FOREST]: '#1e5631',
+    [HEX_TYPES.MINE]: '#4a4a4a',
+    [HEX_TYPES.FARM]: '#7d8c1f',
+    [HEX_TYPES.BARRACKS]: '#8b0000',
+    [HEX_TYPES.ARCHERY_RANGE]: '#654321',
+    [HEX_TYPES.STABLE]: '#c2956e',
+    [HEX_TYPES.WATCHTOWER]: '#4682b4',
+    [HEX_TYPES.SHADOW_CAMP]: '#2c1e4a',
+    [HEX_TYPES.SPAWN_P1]: '#1a3a5c',
+    [HEX_TYPES.SPAWN_P2]: '#5c1a1a'
+};
+
+const HEX_NAMES = {
+    [HEX_TYPES.EMPTY]: 'Grassland',
+    [HEX_TYPES.FOREST]: 'Forest',
+    [HEX_TYPES.MINE]: 'Mine',
+    [HEX_TYPES.FARM]: 'Farm',
+    [HEX_TYPES.BARRACKS]: 'Barracks',
+    [HEX_TYPES.ARCHERY_RANGE]: 'Archery Range',
+    [HEX_TYPES.STABLE]: 'Stable',
+    [HEX_TYPES.WATCHTOWER]: 'Watchtower',
+    [HEX_TYPES.SHADOW_CAMP]: 'Shadow Camp',
+    [HEX_TYPES.SPAWN_P1]: 'Player 1 Spawn',
+    [HEX_TYPES.SPAWN_P2]: 'Player 2 Spawn'
+};
+
+const ABILITIES = {
+    WOODCUTTING: 'woodcutting',
+    MINING: 'mining',
+    FARMING: 'farming',
+    MELEE_COMBAT: 'melee_combat',
+    RANGED_COMBAT: 'ranged_combat',
+    SWIFT: 'swift',
+    SCOUTING: 'scouting',
+    CLOAKING: 'cloaking'
+};
+
+const HEX_TEACHES = {
+    [HEX_TYPES.FOREST]: ABILITIES.WOODCUTTING,
+    [HEX_TYPES.MINE]: ABILITIES.MINING,
+    [HEX_TYPES.FARM]: ABILITIES.FARMING,
+    [HEX_TYPES.BARRACKS]: ABILITIES.MELEE_COMBAT,
+    [HEX_TYPES.ARCHERY_RANGE]: ABILITIES.RANGED_COMBAT,
+    [HEX_TYPES.STABLE]: ABILITIES.SWIFT,
+    [HEX_TYPES.WATCHTOWER]: ABILITIES.SCOUTING,
+    [HEX_TYPES.SHADOW_CAMP]: ABILITIES.CLOAKING
+};
+
+const ABILITY_NAMES = {
+    [ABILITIES.WOODCUTTING]: 'Woodcutting',
+    [ABILITIES.MINING]: 'Mining',
+    [ABILITIES.FARMING]: 'Farming',
+    [ABILITIES.MELEE_COMBAT]: 'Melee Combat',
+    [ABILITIES.RANGED_COMBAT]: 'Ranged Combat',
+    [ABILITIES.SWIFT]: 'Swift',
+    [ABILITIES.SCOUTING]: 'Scouting',
+    [ABILITIES.CLOAKING]: 'Cloaking'
+};
+
+const COMBAT_TYPES = {
+    MELEE: 'melee',
+    RANGED: 'ranged',
+    SWIFT: 'swift'
+};
+
+const COMBAT_ADVANTAGE = {
+    [COMBAT_TYPES.MELEE]: COMBAT_TYPES.RANGED,
+    [COMBAT_TYPES.RANGED]: COMBAT_TYPES.SWIFT,
+    [COMBAT_TYPES.SWIFT]: COMBAT_TYPES.MELEE
+};
+
+const RESOURCES = {
+    WOOD: 'wood',
+    ORE: 'ore',
+    FOOD: 'food'
+};
+
+const ABILITY_TO_RESOURCE = {
+    [ABILITIES.WOODCUTTING]: RESOURCES.WOOD,
+    [ABILITIES.MINING]: RESOURCES.ORE,
+    [ABILITIES.FARMING]: RESOURCES.FOOD
+};
+
+const BALANCE = {
+    MAX_ABILITY_LEVEL: 3,
+    BASE_HP: 3,
+    BASE_MOVE_RANGE: 2,
+    SWIFT_MOVE_BONUS: 1,
+    BASE_ATTACK_DAMAGE: 1,
+    COUNTER_DAMAGE_BONUS: 1.5,
+    GANG_UP_BONUS: 0.5,
+    RANGED_ATTACK_RANGE: 2,
+    RANGED_ATTACK_RANGE_L3: 3,
+    SCOUT_REVEAL_RANGE: 2,
+    SPAWN_COST: 5,
+    XP_TO_LEVEL: 3,
+    XP_PER_GATHER: 1,
+    XP_PER_COMBAT_WIN: 2,
+    XP_PER_COMBAT_SURVIVE: 1,
+    STARTING_RESOURCES: {
+        [RESOURCES.WOOD]: 0,
+        [RESOURCES.ORE]: 0,
+        [RESOURCES.FOOD]: 10
+    }
+};
+
+// ============ HEX SYSTEM ============
+class Hex {
+    constructor(q, r, type = HEX_TYPES.EMPTY) {
+        this.q = q;
+        this.r = r;
+        this.type = type;
+        this.unit = null;
+    }
+
+    get key() { return `${this.q},${this.r}`; }
+
+    toPixel(size, offsetX = 0, offsetY = 0) {
+        const x = size * (Math.sqrt(3) * this.q + Math.sqrt(3) / 2 * this.r) + offsetX;
+        const y = size * (3 / 2 * this.r) + offsetY;
+        return { x, y };
+    }
+
+    getCorners(size, offsetX = 0, offsetY = 0) {
+        const center = this.toPixel(size, offsetX, offsetY);
+        const corners = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = Math.PI / 180 * (60 * i - 30);
+            corners.push({
+                x: center.x + size * Math.cos(angle),
+                y: center.y + size * Math.sin(angle)
+            });
+        }
+        return corners;
+    }
+
+    getNeighborCoords() {
+        const dirs = [{q:1,r:0},{q:1,r:-1},{q:0,r:-1},{q:-1,r:0},{q:-1,r:1},{q:0,r:1}];
+        return dirs.map(d => ({q: this.q + d.q, r: this.r + d.r}));
+    }
+
+    distanceTo(other) {
+        return (Math.abs(this.q - other.q) + Math.abs(this.q + this.r - other.q - other.r) + Math.abs(this.r - other.r)) / 2;
+    }
+
+    equals(other) { return this.q === other.q && this.r === other.r; }
+}
+
+class HexGrid {
+    constructor(radius) {
+        this.radius = radius;
+        this.hexes = new Map();
+        this.generateGrid();
+    }
+
+    generateGrid() {
+        for (let q = -this.radius; q <= this.radius; q++) {
+            const r1 = Math.max(-this.radius, -q - this.radius);
+            const r2 = Math.min(this.radius, -q + this.radius);
+            for (let r = r1; r <= r2; r++) {
+                const hex = new Hex(q, r);
+                this.hexes.set(hex.key, hex);
+            }
+        }
+        this.placeSpecialHexes();
+    }
+
+    placeSpecialHexes() {
+        const hexArray = Array.from(this.hexes.values());
+        const p1Spawn = this.getHex(-this.radius + 1, 0) || this.getHex(-this.radius, 0);
+        const p2Spawn = this.getHex(this.radius - 1, 0) || this.getHex(this.radius, 0);
+        if (p1Spawn) p1Spawn.type = HEX_TYPES.SPAWN_P1;
+        if (p2Spawn) p2Spawn.type = HEX_TYPES.SPAWN_P2;
+
+        const trainingTypes = [HEX_TYPES.FOREST, HEX_TYPES.MINE, HEX_TYPES.FARM, HEX_TYPES.BARRACKS, HEX_TYPES.ARCHERY_RANGE, HEX_TYPES.STABLE, HEX_TYPES.WATCHTOWER, HEX_TYPES.SHADOW_CAMP];
+        const emptyHexes = hexArray.filter(h => h.type === HEX_TYPES.EMPTY);
+        for (let i = emptyHexes.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [emptyHexes[i], emptyHexes[j]] = [emptyHexes[j], emptyHexes[i]];
+        }
+        let placedCount = 0;
+        const numEachType = Math.max(1, Math.floor(this.radius / 2));
+        for (const type of trainingTypes) {
+            for (let i = 0; i < numEachType && placedCount < emptyHexes.length; i++) {
+                emptyHexes[placedCount].type = type;
+                placedCount++;
+            }
+        }
+    }
+
+    getHex(q, r) { return this.hexes.get(`${q},${r}`); }
+
+    pixelToHex(x, y, size, offsetX = 0, offsetY = 0) {
+        const adjustedX = x - offsetX;
+        const adjustedY = y - offsetY;
+        const q = (Math.sqrt(3) / 3 * adjustedX - 1 / 3 * adjustedY) / size;
+        const r = (2 / 3 * adjustedY) / size;
+        return this.roundHex(q, r);
+    }
+
+    roundHex(q, r) {
+        const s = -q - r;
+        let rq = Math.round(q), rr = Math.round(r), rs = Math.round(s);
+        const qDiff = Math.abs(rq - q), rDiff = Math.abs(rr - r), sDiff = Math.abs(rs - s);
+        if (qDiff > rDiff && qDiff > sDiff) rq = -rr - rs;
+        else if (rDiff > sDiff) rr = -rq - rs;
+        return this.getHex(rq, rr);
+    }
+
+    getHexesInRange(centerHex, range) {
+        const results = [];
+        for (let q = -range; q <= range; q++) {
+            for (let r = Math.max(-range, -q - range); r <= Math.min(range, -q + range); r++) {
+                const hex = this.getHex(centerHex.q + q, centerHex.r + r);
+                if (hex && !hex.equals(centerHex)) results.push(hex);
+            }
+        }
+        return results;
+    }
+
+    getNeighbors(hex) {
+        return hex.getNeighborCoords().map(c => this.getHex(c.q, c.r)).filter(h => h);
+    }
+
+    getReachableHexes(startHex, moveRange, canPass = () => true) {
+        const reachable = new Map();
+        const queue = [{hex: startHex, dist: 0}];
+        const visited = new Set([startHex.key]);
+        while (queue.length > 0) {
+            const {hex, dist} = queue.shift();
+            if (dist > 0) reachable.set(hex.key, hex);
+            if (dist >= moveRange) continue;
+            for (const n of this.getNeighbors(hex)) {
+                if (!visited.has(n.key) && canPass(n)) {
+                    visited.add(n.key);
+                    queue.push({hex: n, dist: dist + 1});
+                }
+            }
+        }
+        return Array.from(reachable.values());
+    }
+}
+
+// ============ RENDERER ============
+class HexRenderer {
+    constructor(canvas, grid) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.grid = grid;
+        this.hexSize = HEX_SIZE;
+        this.hoveredHex = null;
+        this.selectedHex = null;
+        this.highlightedHexes = [];
+        this.highlightColor = 'rgba(255,255,255,0.3)';
+        const width = this.hexSize * Math.sqrt(3) * (2 * grid.radius + 1);
+        const height = this.hexSize * 2 * (2 * grid.radius + 1);
+        canvas.width = width + 40;
+        canvas.height = height + 40;
+        this.offsetX = canvas.width / 2;
+        this.offsetY = canvas.height / 2;
+    }
+
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        for (const hex of this.grid.hexes.values()) this.drawHex(hex);
+        for (const hex of this.highlightedHexes) this.drawHighlight(hex, this.highlightColor);
+        if (this.selectedHex) this.drawHighlight(this.selectedHex, 'rgba(255,215,0,0.5)');
+        if (this.hoveredHex) this.drawHighlight(this.hoveredHex, 'rgba(255,255,255,0.2)');
+        for (const hex of this.grid.hexes.values()) if (hex.unit) this.drawUnit(hex, hex.unit);
+    }
+
+    drawHex(hex) {
+        const corners = hex.getCorners(this.hexSize, this.offsetX, this.offsetY);
+        this.ctx.beginPath();
+        this.ctx.moveTo(corners[0].x, corners[0].y);
+        for (let i = 1; i < 6; i++) this.ctx.lineTo(corners[i].x, corners[i].y);
+        this.ctx.closePath();
+        this.ctx.fillStyle = HEX_COLORS[hex.type] || HEX_COLORS[HEX_TYPES.EMPTY];
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#1a1a2e';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        this.drawIcon(hex);
+    }
+
+    drawIcon(hex) {
+        const center = hex.toPixel(this.hexSize, this.offsetX, this.offsetY);
+        const icons = {
+            [HEX_TYPES.FOREST]: 'T', [HEX_TYPES.MINE]: 'M', [HEX_TYPES.FARM]: 'F',
+            [HEX_TYPES.BARRACKS]: 'B', [HEX_TYPES.ARCHERY_RANGE]: 'A', [HEX_TYPES.STABLE]: 'S',
+            [HEX_TYPES.WATCHTOWER]: 'W', [HEX_TYPES.SHADOW_CAMP]: 'C',
+            [HEX_TYPES.SPAWN_P1]: 'P1', [HEX_TYPES.SPAWN_P2]: 'P2'
+        };
+        if (icons[hex.type]) {
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            this.ctx.fillText(icons[hex.type], center.x, center.y + this.hexSize * 0.25);
+        }
+    }
+
+    drawHighlight(hex, color) {
+        const corners = hex.getCorners(this.hexSize, this.offsetX, this.offsetY);
+        this.ctx.beginPath();
+        this.ctx.moveTo(corners[0].x, corners[0].y);
+        for (let i = 1; i < 6; i++) this.ctx.lineTo(corners[i].x, corners[i].y);
+        this.ctx.closePath();
+        this.ctx.fillStyle = color;
+        this.ctx.fill();
+    }
+
+    drawUnit(hex, unit) {
+        const center = hex.toPixel(this.hexSize, this.offsetX, this.offsetY);
+        const radius = this.hexSize * 0.35;
+        this.ctx.beginPath();
+        this.ctx.arc(center.x, center.y - 8, radius, 0, Math.PI * 2);
+        this.ctx.fillStyle = unit.owner === 1 ? '#4da6ff' : '#ff6b6b';
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#fff';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        const rank = unit.getRank();
+        if (rank > 0) {
+            this.ctx.font = 'bold 11px Arial';
+            this.ctx.fillStyle = '#fff';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(rank.toString(), center.x, center.y - 8);
+        }
+        const hpW = this.hexSize * 0.5, hpH = 4, hpPct = unit.hp / unit.maxHp;
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(center.x - hpW/2, center.y - 8 - radius - 6, hpW, hpH);
+        this.ctx.fillStyle = hpPct > 0.5 ? '#4caf50' : hpPct > 0.25 ? '#ff9800' : '#f44336';
+        this.ctx.fillRect(center.x - hpW/2, center.y - 8 - radius - 6, hpW * hpPct, hpH);
+        if (unit.hasActed) {
+            this.ctx.globalAlpha = 0.5;
+            this.ctx.beginPath();
+            this.ctx.arc(center.x, center.y - 8, radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#000';
+            this.ctx.fill();
+            this.ctx.globalAlpha = 1;
+        }
+    }
+
+    getHexAtPoint(x, y) { return this.grid.pixelToHex(x, y, this.hexSize, this.offsetX, this.offsetY); }
+    setHoveredHex(h) { this.hoveredHex = h; }
+    setSelectedHex(h) { this.selectedHex = h; }
+    setHighlightedHexes(hexes, color = 'rgba(255,255,255,0.3)') { this.highlightedHexes = hexes; this.highlightColor = color; }
+    clearHighlights() { this.highlightedHexes = []; this.selectedHex = null; }
+}
+
+// ============ UNIT ============
+class Unit {
+    constructor(owner, hex) {
+        this.owner = owner;
+        this.hex = hex;
+        this.hp = BALANCE.BASE_HP;
+        this.maxHp = BALANCE.BASE_HP;
+        this.abilities = new Map();
+        this.turnsOnCurrentHex = 0;
+        this.hasActed = false;
+        this.hasMoved = false;
+        this.isHidden = false;
+        this.attacksReceivedThisTurn = 0;
+    }
+
+    getRank() { let t = 0; for (const a of this.abilities.values()) t += a.level; return t; }
+    getAbilityLevel(name) { const a = this.abilities.get(name); return a ? a.level : 0; }
+    hasAbility(name) { return this.abilities.has(name); }
+
+    learnAbility(name) {
+        if (this.abilities.has(name)) {
+            const a = this.abilities.get(name);
+            if (a.level < BALANCE.MAX_ABILITY_LEVEL) { a.level++; a.xp = 0; return {leveled: true, newLevel: a.level}; }
+            return {leveled: false, maxed: true};
+        }
+        this.abilities.set(name, {level: 1, xp: 0});
+        return {learned: true, newLevel: 1};
+    }
+
+    addXP(name, amt) {
+        if (!this.abilities.has(name)) return {leveledUp: false};
+        const a = this.abilities.get(name);
+        if (a.level >= BALANCE.MAX_ABILITY_LEVEL) return {leveledUp: false, maxed: true};
+        a.xp += amt;
+        if (a.xp >= BALANCE.XP_TO_LEVEL) { a.level++; a.xp = 0; return {leveledUp: true, newLevel: a.level}; }
+        return {leveledUp: false};
+    }
+
+    getMoveRange() {
+        let r = BALANCE.BASE_MOVE_RANGE;
+        const sl = this.getAbilityLevel(ABILITIES.SWIFT);
+        if (sl > 0) r += Math.ceil(sl * BALANCE.SWIFT_MOVE_BONUS);
+        return r;
+    }
+
+    getAttackRange() {
+        const rl = this.getAbilityLevel(ABILITIES.RANGED_COMBAT);
+        if (rl >= 3) return BALANCE.RANGED_ATTACK_RANGE_L3;
+        if (rl > 0) return BALANCE.RANGED_ATTACK_RANGE;
+        return 1;
+    }
+
+    getBaseDamage() {
+        const ml = this.getAbilityLevel(ABILITIES.MELEE_COMBAT);
+        const rl = this.getAbilityLevel(ABILITIES.RANGED_COMBAT);
+        const sl = this.getAbilityLevel(ABILITIES.SWIFT);
+        const max = Math.max(ml, rl, sl);
+        return max === 0 ? BALANCE.BASE_ATTACK_DAMAGE : BALANCE.BASE_ATTACK_DAMAGE * max;
+    }
+
+    getCombatType() {
+        const ml = this.getAbilityLevel(ABILITIES.MELEE_COMBAT);
+        const rl = this.getAbilityLevel(ABILITIES.RANGED_COMBAT);
+        const sl = this.getAbilityLevel(ABILITIES.SWIFT);
+        if (rl >= ml && rl >= sl && rl > 0) return COMBAT_TYPES.RANGED;
+        if (sl >= ml && sl > 0) return COMBAT_TYPES.SWIFT;
+        if (ml > 0) return COMBAT_TYPES.MELEE;
+        return null;
+    }
+
+    hasAdvantageOver(other) {
+        const my = this.getCombatType(), their = other.getCombatType();
+        if (!my || !their) return false;
+        return COMBAT_ADVANTAGE[my] === their;
+    }
+
+    getGatherRate(name) { return this.getAbilityLevel(name); }
+    getScoutRange() { const l = this.getAbilityLevel(ABILITIES.SCOUTING); return l > 0 ? BALANCE.SCOUT_REVEAL_RANGE + l - 1 : 0; }
+    takeDamage(amt) { this.hp -= amt; if (this.hp <= 0) { this.hp = 0; return {died: true}; } return {died: false}; }
+    resetTurn() { this.hasActed = false; this.hasMoved = false; this.attacksReceivedThisTurn = 0; }
+    canAct() { return !this.hasActed; }
+    canMove() { return !this.hasMoved && !this.hasActed; }
+    getAbilityList() { const list = []; for (const [n, d] of this.abilities) list.push({name: ABILITY_NAMES[n]||n, level: d.level}); return list; }
+}
+
+// ============ COMBAT ============
+class CombatSystem {
+    constructor(game) { this.game = game; }
+
+    calculateDamage(atk, def) {
+        let dmg = atk.getBaseDamage();
+        if (atk.hasAdvantageOver(def)) dmg = Math.floor(dmg * BALANCE.COUNTER_DAMAGE_BONUS);
+        if (def.attacksReceivedThisTurn > 0) dmg = Math.floor(dmg * (1 + def.attacksReceivedThisTurn * BALANCE.GANG_UP_BONUS));
+        return Math.max(1, dmg);
+    }
+
+    attack(atk, def) {
+        const result = {damage: 0, hadAdvantage: false, gangUpBonus: false, defenderDied: false, logs: []};
+        if (!this.canAttack(atk, def)) { result.error = 'Invalid'; return result; }
+        result.hadAdvantage = atk.hasAdvantageOver(def);
+        result.gangUpBonus = def.attacksReceivedThisTurn > 0;
+        result.damage = this.calculateDamage(atk, def);
+        result.logs.push(`P${atk.owner} attacks P${def.owner}!`);
+        if (result.hadAdvantage) result.logs.push(`Counter bonus!`);
+        if (result.gangUpBonus) result.logs.push(`Gang-up bonus!`);
+        const dmgRes = def.takeDamage(result.damage);
+        result.logs.push(`Dealt ${result.damage} damage!`);
+        def.attacksReceivedThisTurn++;
+        if (dmgRes.died) {
+            result.defenderDied = true;
+            result.logs.push(`P${def.owner} unit destroyed!`);
+            if (def.hex) def.hex.unit = null;
+            const ct = atk.getCombatType();
+            if (ct) {
+                const ab = ct === COMBAT_TYPES.MELEE ? ABILITIES.MELEE_COMBAT : ct === COMBAT_TYPES.RANGED ? ABILITIES.RANGED_COMBAT : ABILITIES.SWIFT;
+                const xp = atk.addXP(ab, BALANCE.XP_PER_COMBAT_WIN);
+                if (xp.leveledUp) result.logs.push(`Leveled up to ${xp.newLevel}!`);
+            }
+        } else {
+            result.logs.push(`${def.hp} HP remaining`);
+        }
+        atk.hasActed = true;
+        return result;
+    }
+
+    canAttack(atk, def) {
+        if (!atk || !def || atk.owner === def.owner || atk.hasActed || !atk.hex || !def.hex) return false;
+        const dist = atk.hex.distanceTo(def.hex);
+        if (dist > atk.getAttackRange()) return false;
+        if (def.isHidden && atk.getScoutRange() < dist) return false;
+        return true;
+    }
+
+    getValidTargets(atk) {
+        if (!atk || atk.hasActed) return [];
+        const targets = [];
+        for (const hex of this.game.grid.getHexesInRange(atk.hex, atk.getAttackRange())) {
+            if (hex.unit && this.canAttack(atk, hex.unit)) targets.push(hex);
+        }
+        return targets;
+    }
+}
+
+// ============ TRAINING ============
+class TrainingSystem {
+    constructor(game) { this.game = game; }
+
+    processTraining(player) {
+        const logs = [];
+        for (const hex of this.game.grid.hexes.values()) {
+            if (hex.unit && hex.unit.owner === player) {
+                const r = this.processUnit(hex.unit);
+                if (r.trained) logs.push(r.message);
+            }
+        }
+        return logs;
+    }
+
+    processUnit(unit) {
+        const ability = HEX_TEACHES[unit.hex.type];
+        if (!ability) { unit.turnsOnCurrentHex = 0; return {trained: false}; }
+        unit.turnsOnCurrentHex++;
+        if (unit.turnsOnCurrentHex >= 1) {
+            const r = unit.learnAbility(ability);
+            if (r.learned) return {trained: true, message: `P${unit.owner} learned ${ABILITY_NAMES[ability]}!`};
+            if (r.leveled) return {trained: true, message: `P${unit.owner}'s ${ABILITY_NAMES[ability]} -> Lv${r.newLevel}!`};
+        }
+        return {trained: false};
+    }
+
+    canTrain(unit) {
+        if (!unit || !unit.hex) return false;
+        const ab = HEX_TEACHES[unit.hex.type];
+        if (!ab) return false;
+        return unit.getAbilityLevel(ab) < BALANCE.MAX_ABILITY_LEVEL;
+    }
+
+    getTrainingInfo(hex) {
+        const ab = HEX_TEACHES[hex.type];
+        if (!ab) return null;
+        return {ability: ab, abilityName: ABILITY_NAMES[ab]};
+    }
+}
+
+// ============ GATHERING ============
+class GatheringSystem {
+    constructor(game) { this.game = game; }
+
+    canGather(unit) {
+        if (!unit || !unit.hex || unit.hasActed) return false;
+        const ab = HEX_TEACHES[unit.hex.type];
+        if (![HEX_TYPES.FOREST, HEX_TYPES.MINE, HEX_TYPES.FARM].includes(unit.hex.type)) return false;
+        return unit.hasAbility(ab);
+    }
+
+    gather(unit) {
+        if (!this.canGather(unit)) return {success: false, error: 'Cannot gather'};
+        const ab = HEX_TEACHES[unit.hex.type];
+        const res = ABILITY_TO_RESOURCE[ab];
+        const amt = unit.getGatherRate(ab);
+        this.game.addResource(unit.owner, res, amt);
+        unit.hasActed = true;
+        const xp = unit.addXP(ab, BALANCE.XP_PER_GATHER);
+        let msg = `Gathered ${amt} ${res}!`;
+        if (xp.leveledUp) msg += ` Leveled up!`;
+        return {success: true, resource: res, amount: amt, message: msg, leveledUp: xp.leveledUp};
+    }
+
+    getGatherPreview(unit) {
+        if (!this.canGather(unit)) return null;
+        const ab = HEX_TEACHES[unit.hex.type];
+        return {resource: ABILITY_TO_RESOURCE[ab], amount: unit.getGatherRate(ab)};
+    }
+}
+
+// ============ GAME ============
+class Game {
+    constructor() {
+        this.grid = null;
+        this.renderer = null;
+        this.combat = new CombatSystem(this);
+        this.training = new TrainingSystem(this);
+        this.gathering = new GatheringSystem(this);
+        this.currentPlayer = 1;
+        this.turnNumber = 1;
+        this.selectedUnit = null;
+        this.gameStarted = false;
+        this.attackMode = false;
+        this.resources = {1: {...BALANCE.STARTING_RESOURCES}, 2: {...BALANCE.STARTING_RESOURCES}};
+        this.units = {1: [], 2: []};
+        this.combatLog = [];
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.addEventListener('click', e => this.startGame(parseInt(e.target.dataset.size)));
+        });
+        document.getElementById('btn-spawn').addEventListener('click', () => this.trySpawnUnit());
+        document.getElementById('btn-end-turn').addEventListener('click', () => this.endTurn());
+        document.getElementById('btn-train').addEventListener('click', () => this.tryTrain());
+        document.getElementById('btn-gather').addEventListener('click', () => this.tryGather());
+        document.getElementById('btn-attack').addEventListener('click', () => this.enterAttackMode());
+    }
+
+    startGame(size) {
+        this.grid = new HexGrid(size);
+        const canvas = document.getElementById('game-board');
+        canvas.classList.add('visible');
+        document.getElementById('board-size-selector').classList.add('hidden');
+        this.renderer = new HexRenderer(canvas, this.grid);
+        this.setupCanvasEvents(canvas);
+        for (const hex of this.grid.hexes.values()) {
+            if (hex.type === HEX_TYPES.SPAWN_P1) this.createUnit(1, hex);
+            else if (hex.type === HEX_TYPES.SPAWN_P2) this.createUnit(2, hex);
+        }
+        this.gameStarted = true;
+        this.updateUI();
+        this.renderer.render();
+        this.addLog('Game started!');
+        this.addLog("Player 1's turn");
+    }
+
+    setupCanvasEvents(canvas) {
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const hex = this.renderer.getHexAtPoint(e.clientX - rect.left, e.clientY - rect.top);
+            this.renderer.setHoveredHex(hex);
+            this.updateHexInfo(hex);
+            this.renderer.render();
+        });
+        canvas.addEventListener('click', e => {
+            const rect = canvas.getBoundingClientRect();
+            const hex = this.renderer.getHexAtPoint(e.clientX - rect.left, e.clientY - rect.top);
+            this.handleHexClick(hex);
+        });
+    }
+
+    createUnit(player, hex) {
+        if (hex.unit) return null;
+        const unit = new Unit(player, hex);
+        hex.unit = unit;
+        this.units[player].push(unit);
+        return unit;
+    }
+
+    handleHexClick(hex) {
+        if (!hex || !this.gameStarted) return;
+        if (this.attackMode && this.selectedUnit) { this.handleAttackClick(hex); return; }
+        if (this.selectedUnit && !hex.unit) {
+            const moves = this.getValidMoves(this.selectedUnit);
+            if (moves.some(h => h.equals(hex))) { this.moveUnit(this.selectedUnit, hex); return; }
+        }
+        if (hex.unit) this.selectUnit(hex.unit);
+        else this.deselectUnit();
+    }
+
+    handleAttackClick(hex) {
+        if (!hex.unit || hex.unit.owner === this.currentPlayer) { this.exitAttackMode(); return; }
+        const targets = this.combat.getValidTargets(this.selectedUnit);
+        if (targets.some(h => h.equals(hex))) {
+            const r = this.combat.attack(this.selectedUnit, hex.unit);
+            for (const log of r.logs) this.addLog(log, r.defenderDied ? 'death' : 'damage');
+            this.exitAttackMode();
+            this.updateUI();
+            this.renderer.render();
+            this.checkWin();
+        }
+    }
+
+    selectUnit(unit) {
+        this.selectedUnit = unit;
+        this.renderer.setSelectedHex(unit.hex);
+        if (unit.owner === this.currentPlayer && unit.canMove()) {
+            this.renderer.setHighlightedHexes(this.getValidMoves(unit), 'rgba(100,200,100,0.4)');
+        } else {
+            this.renderer.setHighlightedHexes([]);
+        }
+        this.updateSelectedUnitPanel();
+        this.renderer.render();
+    }
+
+    deselectUnit() {
+        this.selectedUnit = null;
+        this.renderer.clearHighlights();
+        this.updateSelectedUnitPanel();
+        this.renderer.render();
+    }
+
+    getValidMoves(unit) {
+        if (!unit.canMove()) return [];
+        return this.grid.getReachableHexes(unit.hex, unit.getMoveRange(), h => !h.unit);
+    }
+
+    moveUnit(unit, toHex) {
+        if (!unit.canMove()) return false;
+        const fromHex = unit.hex;
+        fromHex.unit = null;
+        toHex.unit = unit;
+        unit.hex = toHex;
+        unit.hasMoved = true;
+        if (!fromHex.equals(toHex)) unit.turnsOnCurrentHex = 0;
+        this.deselectUnit();
+        this.selectUnit(unit);
+        this.updateUI();
+        this.renderer.render();
+        return true;
+    }
+
+    enterAttackMode() {
+        if (!this.selectedUnit || !this.selectedUnit.canAct()) return;
+        this.attackMode = true;
+        this.renderer.setHighlightedHexes(this.combat.getValidTargets(this.selectedUnit), 'rgba(255,100,100,0.5)');
+        this.renderer.render();
+        this.addLog('Select target');
+    }
+
+    exitAttackMode() {
+        this.attackMode = false;
+        if (this.selectedUnit) this.selectUnit(this.selectedUnit);
+    }
+
+    trySpawnUnit() {
+        if (this.resources[this.currentPlayer][RESOURCES.FOOD] < BALANCE.SPAWN_COST) { this.addLog('Not enough food!'); return; }
+        const spawnType = this.currentPlayer === 1 ? HEX_TYPES.SPAWN_P1 : HEX_TYPES.SPAWN_P2;
+        let spawnHex = null;
+        for (const hex of this.grid.hexes.values()) if (hex.type === spawnType && !hex.unit) { spawnHex = hex; break; }
+        if (!spawnHex) { this.addLog('Spawn occupied!'); return; }
+        this.resources[this.currentPlayer][RESOURCES.FOOD] -= BALANCE.SPAWN_COST;
+        this.createUnit(this.currentPlayer, spawnHex);
+        this.addLog(`P${this.currentPlayer} spawned recruit!`);
+        this.updateUI();
+        this.renderer.render();
+    }
+
+    tryTrain() {
+        if (!this.selectedUnit || this.selectedUnit.owner !== this.currentPlayer) return;
+        const info = this.training.getTrainingInfo(this.selectedUnit.hex);
+        if (!info) { this.addLog('Nothing to train here'); return; }
+        if (!this.training.canTrain(this.selectedUnit)) { this.addLog('Already maxed!'); return; }
+        this.addLog(`Stay here to learn ${info.abilityName}`);
+    }
+
+    tryGather() {
+        if (!this.selectedUnit || this.selectedUnit.owner !== this.currentPlayer) return;
+        const r = this.gathering.gather(this.selectedUnit);
+        if (r.success) { this.addLog(r.message, r.leveledUp ? 'level-up' : 'info'); this.updateUI(); this.renderer.render(); }
+        else this.addLog(r.error);
+    }
+
+    endTurn() {
+        for (const u of this.units[this.currentPlayer]) u.resetTurn();
+        this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+        if (this.currentPlayer === 1) this.turnNumber++;
+        const logs = this.training.processTraining(this.currentPlayer);
+        for (const l of logs) this.addLog(l, 'level-up');
+        for (const u of this.units[this.currentPlayer]) u.attacksReceivedThisTurn = 0;
+        this.deselectUnit();
+        this.addLog(`Turn ${this.turnNumber} - Player ${this.currentPlayer}`);
+        this.updateUI();
+        this.renderer.render();
+    }
+
+    addResource(player, res, amt) { this.resources[player][res] += amt; }
+
+    checkWin() {
+        this.units[1] = this.units[1].filter(u => u.hp > 0);
+        this.units[2] = this.units[2].filter(u => u.hp > 0);
+        if (this.units[1].length === 0) { this.addLog('PLAYER 2 WINS!', 'death'); this.gameStarted = false; }
+        else if (this.units[2].length === 0) { this.addLog('PLAYER 1 WINS!', 'death'); this.gameStarted = false; }
+    }
+
+    updateUI() {
+        document.getElementById('current-player').textContent = `Player ${this.currentPlayer}`;
+        document.getElementById('current-player').className = this.currentPlayer === 1 ? 'player1' : 'player2';
+        const res = this.resources[this.currentPlayer];
+        document.getElementById('wood-count').textContent = res[RESOURCES.WOOD];
+        document.getElementById('ore-count').textContent = res[RESOURCES.ORE];
+        document.getElementById('food-count').textContent = res[RESOURCES.FOOD];
+        document.getElementById('btn-spawn').disabled = res[RESOURCES.FOOD] < BALANCE.SPAWN_COST;
+        this.updateSelectedUnitPanel();
+    }
+
+    updateSelectedUnitPanel() {
+        const noSel = document.getElementById('no-selection');
+        const details = document.getElementById('unit-details');
+        const trainBtn = document.getElementById('btn-train');
+        const gatherBtn = document.getElementById('btn-gather');
+        const attackBtn = document.getElementById('btn-attack');
+        if (!this.selectedUnit) { noSel.classList.remove('hidden'); details.classList.add('hidden'); return; }
+        noSel.classList.add('hidden');
+        details.classList.remove('hidden');
+        const u = this.selectedUnit;
+        document.getElementById('unit-owner').textContent = `Player ${u.owner}'s Unit`;
+        document.getElementById('unit-owner').className = u.owner === 1 ? 'player1' : 'player2';
+        document.getElementById('unit-hp').textContent = `HP: ${u.hp}/${u.maxHp}`;
+        const abs = u.getAbilityList();
+        const abDiv = document.getElementById('unit-abilities');
+        if (abs.length === 0) abDiv.innerHTML = '<div class="ability-item"><span class="ability-name">Untrained</span></div>';
+        else abDiv.innerHTML = abs.map(a => `<div class="ability-item"><span class="ability-name">${a.name}</span><span class="ability-level">${'★'.repeat(a.level)}${'☆'.repeat(3-a.level)}</span></div>`).join('');
+        const owned = u.owner === this.currentPlayer;
+        if (owned && this.training.canTrain(u)) { trainBtn.classList.remove('hidden'); const i = this.training.getTrainingInfo(u.hex); trainBtn.textContent = `Train ${i.abilityName}`; }
+        else trainBtn.classList.add('hidden');
+        if (owned && this.gathering.canGather(u)) { gatherBtn.classList.remove('hidden'); const p = this.gathering.getGatherPreview(u); gatherBtn.textContent = `Gather ${p.amount} ${p.resource}`; }
+        else gatherBtn.classList.add('hidden');
+        if (owned && u.canAct() && this.combat.getValidTargets(u).length > 0) attackBtn.classList.remove('hidden');
+        else attackBtn.classList.add('hidden');
+    }
+
+    updateHexInfo(hex) {
+        const typeEl = document.getElementById('hex-type');
+        const coordsEl = document.getElementById('hex-coords');
+        const trainEl = document.getElementById('hex-training-info');
+        if (!hex) { typeEl.textContent = 'Hover over hex'; coordsEl.textContent = ''; trainEl.textContent = ''; return; }
+        typeEl.textContent = HEX_NAMES[hex.type] || 'Unknown';
+        coordsEl.textContent = `(${hex.q}, ${hex.r})`;
+        const info = this.training.getTrainingInfo(hex);
+        trainEl.textContent = info ? `Teaches: ${info.abilityName}` : '';
+    }
+
+    addLog(msg, type = 'info') {
+        this.combatLog.unshift({message: msg, type});
+        if (this.combatLog.length > 50) this.combatLog.pop();
+        document.getElementById('combat-log').innerHTML = this.combatLog.slice(0, 15).map(e => `<div class="log-entry ${e.type}">${e.message}</div>`).join('');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => { window.game = new Game(); });
+    </script>
+</body>
+</html>
